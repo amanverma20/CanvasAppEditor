@@ -1,11 +1,11 @@
 // src/pages/CanvasPage.jsx
 import { Circle, IText, Rect } from "fabric";
 import {
-    doc,
-    getDoc,
-    onSnapshot,
-    serverTimestamp,
-    setDoc,
+  doc,
+  getDoc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import debounce from "lodash.debounce";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,6 +25,7 @@ export default function CanvasPage() {
 
   const [status, setStatus] = useState("Loading...");
   const [copied, setCopied] = useState(false);
+  const [selectedObjectColor, setSelectedObjectColor] = useState("#ff6b6b");
 
   // Memoize the Firestore doc ref so effects don't resubscribe repeatedly
   const sceneRef = useMemo(() => doc(db, "scenes", id), [id]);
@@ -223,6 +224,47 @@ export default function CanvasPage() {
   }, [fabricRef, debouncedSave, viewOnly]);
 
   // 4) helpers: add shapes, toggle pen, delete selected
+  const [currentColor, setCurrentColor] = useState("#ff6b6b");
+
+  // Function to change color of selected objects
+  const changeSelectedObjectColor = (color) => {
+    const fc = fabricRef.current;
+    if (!fc || viewOnly) return;
+    
+    const activeObjects = fc.getActiveObjects();
+    if (activeObjects.length === 0) return;
+
+    activeObjects.forEach((obj) => {
+      obj.set('fill', color);
+    });
+    
+    fc.requestRenderAll();
+    debouncedSave(fc);
+  };
+
+  // Update selected object color when selection changes
+  useEffect(() => {
+    const fc = fabricRef.current;
+    if (!fc) return;
+
+    const updateSelectedColor = () => {
+      const activeObject = fc.getActiveObject();
+      if (activeObject?.fill) {
+        setSelectedObjectColor(activeObject.fill);
+      }
+    };
+
+    fc.on('selection:created', updateSelectedColor);
+    fc.on('selection:updated', updateSelectedColor);
+    fc.on('selection:cleared', () => setSelectedObjectColor(currentColor));
+
+    return () => {
+      fc.off('selection:created', updateSelectedColor);
+      fc.off('selection:updated', updateSelectedColor);
+      fc.off('selection:cleared');
+    };
+  }, [fabricRef, currentColor]);
+
   const addShape = (type) => {
     const fc = fabricRef.current;
     if (!fc || viewOnly) return;
@@ -240,21 +282,21 @@ export default function CanvasPage() {
         height: 80,
         left: 100,
         top: 100,
-        fill: "#f59",
+        fill: currentColor,
       });
     } else if (type === "circle") {
       obj = new Circle({
         radius: 50,
         left: 150,
         top: 150,
-        fill: "#59f",
+        fill: currentColor,
       });
     } else if (type === "text") {
       obj = new IText("Edit text", {
         left: 120,
         top: 120,
         fontSize: 20,
-        fill: "#333",
+        fill: currentColor,
       });
     }
     
@@ -378,6 +420,39 @@ export default function CanvasPage() {
               <span className="tool-icon">✏️</span>
               Draw
             </button>
+          </div>
+
+          <div className="color-group">
+            <label className="color-label">Color:</label>
+            <div className="color-controls">
+              <input 
+                type="color" 
+                value={currentColor} 
+                onChange={(e) => setCurrentColor(e.target.value)}
+                className="color-picker"
+                title="Choose color for new shapes"
+                disabled={viewOnly}
+              />
+              <button 
+                className="tool-btn btn-small" 
+                onClick={() => changeSelectedObjectColor(selectedObjectColor)}
+                disabled={viewOnly}
+                title="Apply color to selected object"
+              >
+                Apply to Selected
+              </button>
+              <input 
+                type="color" 
+                value={selectedObjectColor} 
+                onChange={(e) => {
+                  setSelectedObjectColor(e.target.value);
+                  changeSelectedObjectColor(e.target.value);
+                }}
+                className="color-picker"
+                title="Change selected object color"
+                disabled={viewOnly}
+              />
+            </div>
           </div>
 
           <div className="action-group">
