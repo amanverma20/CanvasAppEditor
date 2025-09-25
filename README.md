@@ -2,7 +2,72 @@
 
 A collaborative real-time 2D drawing editor built with React, Fabric.js, and Firebase. Create, edit, and share interactive canvases with real-time synchronization across multiple users.
 
+# Stateless 2D Editor
+
 **🌐 Live Demo:** [https://task-manager-32b4c.web.app](https://task-manager-32b4c.web.app)
+
+## Project Summary
+
+A real-time collaborative 2D drawing editor built with React, Fabric.js, and Firebase Firestore. Multiple users can simultaneously create, edit, and share interactive canvases with instant synchronization across all connected clients.
+
+## How to Run Locally
+
+### Prerequisites
+
+- Node.js 20.19+ or 22.12+ (current version 20.12.0 may show warnings but works)
+- npm or yarn package manager
+
+### Setup
+
+1. Clone and install dependencies:
+
+   ```bash
+   git clone https://github.com/amanverma20/CanvasAppEditor.git
+   cd CanvasAppEditor
+   npm install
+   ```
+
+2. Create Firebase project and configure:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create new project and enable Firestore Database
+   - Update `src/firebase.js` with your Firebase configuration
+
+3. Start development server:
+
+   ```bash
+   npm run dev
+   ```
+
+## How Persistence Works
+
+Canvas data is stored in Firestore under `scenes/<canvas-id>` documents. Each document contains:
+
+- `data`: Complete Fabric.js canvas JSON representation
+- `createdAt/updatedAt`: Timestamps for tracking changes
+- `viewOnly`: Boolean flag for read-only access mode
+
+Real-time synchronization uses Firestore's `onSnapshot` listener to detect remote changes and automatically update local canvas state.
+
+## Trade-offs
+
+**Canvas Synchronization Strategy:**
+"Chose last-write-wins and storing canvas as whole JSON to keep implementation simple and reliable for assignment; this simplifies loads but may have more writes and conflicts with many simultaneous users. For a production collaborative editor consider CRDTs or per-object operations."
+
+**Security Model:**
+"Firestore test rules are permissive for demo; production must lock writes or use short-lived tokens."
+
+## Bonus Features Implemented
+
+✅ **Real-time Color Picker**: Change colors of rectangles, circles, and text objects  
+✅ **Modern UI/UX**: Professional toolbar design with intuitive controls  
+✅ **Firebase Hosting**: Deployed with automated build pipeline  
+✅ **Export Functionality**: Save canvases as PNG images  
+✅ **Share Links**: Copy-paste URLs for instant collaboration  
+✅ **View-Only Mode**: Read-only canvas sharing with `?viewOnly=true`  
+✅ **Keyboard Shortcuts**: Delete/Backspace for object removal  
+✅ **Responsive Design**: Works on desktop and mobile devices
+
+## Core Features
 
 ## 🚀 Features
 

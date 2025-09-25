@@ -346,10 +346,19 @@ export default function CanvasPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [viewOnly]);
 
-  // 5) share button
-  const shareLink = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
+  // 5) share button functions
+  const shareEditableLink = () => {
+    const baseUrl = window.location.href.split('?')[0]; // Remove any existing query params
+    navigator.clipboard.writeText(baseUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  const shareViewOnlyLink = () => {
+    const baseUrl = window.location.href.split('?')[0]; // Remove any existing query params
+    const viewOnlyUrl = `${baseUrl}?viewOnly=true`;
+    navigator.clipboard.writeText(viewOnlyUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
@@ -368,6 +377,14 @@ export default function CanvasPage() {
 
   return (
     <div className="canvas-page">
+      {/* Toast Notification */}
+      {copied && (
+        <div className="toast-notification">
+          <span className="toast-icon">✓</span>
+          Link copied to clipboard!
+        </div>
+      )}
+      
       {/* Toolbar */}
       <div className="canvas-toolbar">
         <div className="toolbar-section">
@@ -378,7 +395,6 @@ export default function CanvasPage() {
           <div className="status-indicator">
             <span className={`status-dot ${getStatusClass(status)}`}></span>
             <span className="status-text">{status}</span>
-            {copied && <span className="copied-message">✓ Link copied!</span>}
           </div>
         </div>
 
@@ -458,11 +474,19 @@ export default function CanvasPage() {
           <div className="action-group">
             <button 
               className="action-btn btn-success" 
-              onClick={shareLink}
-              title="Copy Share Link"
+              onClick={shareEditableLink}
+              title="Copy Editable Share Link"
             >
-              <span className="action-icon">🔗</span>
-              Share
+              <span className="action-icon">✏️</span>
+              Share to Edit
+            </button>
+            <button 
+              className="action-btn btn-secondary" 
+              onClick={shareViewOnlyLink}
+              title="Copy View-Only Share Link"
+            >
+              <span className="action-icon">�️</span>
+              Share to View
             </button>
             <button 
               className="action-btn btn-secondary" 
@@ -487,17 +511,38 @@ export default function CanvasPage() {
       <div className="info-panel">
         <div className="info-section">
           <h4>Share this canvas:</h4>
-          <div className="share-url">
-            <input 
-              type="text" 
-              value={window.location.href} 
-              readOnly 
-              className="share-input"
-              onClick={(e) => e.target.select()}
-            />
-            <button className="copy-btn btn-small btn-secondary" onClick={shareLink}>
-              Copy
-            </button>
+          <div className="share-options">
+            <div className="share-option">
+              <label>Editable Link:</label>
+              <div className="share-url">
+                <input 
+                  type="text" 
+                  value={window.location.href.split('?')[0]} 
+                  readOnly 
+                  className="share-input"
+                  onClick={(e) => e.target.select()}
+                />
+                <button className="copy-btn btn-small btn-success" onClick={shareEditableLink}>
+                  Copy
+                </button>
+              </div>
+            </div>
+            
+            <div className="share-option">
+              <label>View-Only Link:</label>
+              <div className="share-url">
+                <input 
+                  type="text" 
+                  value={`${window.location.href.split('?')[0]}?viewOnly=true`} 
+                  readOnly 
+                  className="share-input"
+                  onClick={(e) => e.target.select()}
+                />
+                <button className="copy-btn btn-small btn-secondary" onClick={shareViewOnlyLink}>
+                  Copy
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         
