@@ -1,6 +1,6 @@
 /* Canvas Page Styles */
 .canvas-page {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: var(--background-color);
@@ -9,7 +9,7 @@
 
 /* Toast Notification */
 .toast-notification {
-  position: fixed;
+  position: absolute;
   top: 20px;
   right: 20px;
   background: var(--success-color);
@@ -22,7 +22,13 @@
   gap: 0.5rem;
   font-weight: 500;
   font-size: 0.875rem;
-  z-index: 1000;
+  z-index: 10000;
+  width: auto;
+  height: auto;
+  margin: 0;
+  transform: translateX(calc(100% + 40px));
+  opacity: 0;
+  pointer-events: none;
   animation: slideInFade 0.3s ease-out forwards, slideOutFade 0.3s ease-in 1.2s forwards;
 }
 
@@ -39,7 +45,7 @@
 
 @keyframes slideInFade {
   from {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + 40px));
     opacity: 0;
   }
   to {
@@ -54,7 +60,7 @@
     opacity: 1;
   }
   to {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + 40px));
     opacity: 0;
   }
 }
@@ -63,29 +69,42 @@
 .canvas-toolbar {
   background: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
-  padding: 1rem 1.5rem;
+  padding: 0.5rem 1.25rem; /* Further reduced padding */
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: var(--shadow-sm);
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent wrapping */
   gap: 1rem;
+  min-height: 60px; /* Reduced height */
 }
 
-.toolbar-section {
+.toolbar-section-left {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem; /* Reduced gap */
+  min-height: 40px; /* Reduced height */
+  flex: 0 0 auto; /* Don't grow, don't shrink */
+}
+
+.toolbar-section-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Reduced gap */
+  min-height: 40px; /* Reduced height */
+  margin-left: auto; /* Push to right */
+  flex: 0 0 auto; /* Don't grow, don't shrink */
 }
 
 .canvas-title {
-  font-size: 1.5rem;
+  font-size: 1.3rem; /* Smaller font */
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem; /* Further reduced gap */
+  min-width: 200px; /* Fixed width */
 }
 
 .canvas-id {
@@ -111,6 +130,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 140px; /* Fixed width to prevent navbar shift */
 }
 
 .status-dot {
@@ -151,6 +171,11 @@
   font-size: 0.875rem;
   color: var(--text-secondary);
   font-weight: 500;
+  width: 100px; /* Fixed width to prevent text length variations from shifting layout */
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Tool Groups */
@@ -163,11 +188,12 @@
 .color-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem; /* Reduced gap to save space */
   padding: 0.5rem;
   background: var(--background-color);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  min-width: 200px; /* Fixed width to prevent shifting */
 }
 
 .color-label {
@@ -175,17 +201,18 @@
   font-weight: 500;
   color: var(--text-primary);
   margin: 0;
+  min-width: 45px; /* Fixed width for label */
 }
 
 .color-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem; /* Reduced gap */
 }
 
 .color-picker {
-  width: 40px;
-  height: 36px;
+  width: 36px; /* Slightly smaller to save space */
+  height: 32px; /* Slightly smaller to save space */
   border: 2px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -296,7 +323,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 1.5rem;
+  padding: 0.75rem; /* Reduced padding to move canvas up */
   overflow: auto;
 }
 
@@ -440,8 +467,13 @@ kbd {
     align-items: stretch;
   }
   
-  .toolbar-section {
+  .toolbar-section-left {
     justify-content: space-between;
+  }
+  
+  .toolbar-section-right {
+    justify-content: center;
+    margin-left: 0;
   }
   
   .tool-group {
@@ -459,7 +491,7 @@ kbd {
 
 @media (max-width: 768px) {
   .canvas-container {
-    padding: 1rem;
+    padding: 0.5rem; /* Further reduced mobile padding */
   }
   
   .canvas-wrapper {

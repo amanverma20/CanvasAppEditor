@@ -1,5 +1,5 @@
 // src/pages/CanvasPage.jsx
-import { Circle, IText, Rect } from "fabric";
+import { Circle, IText, PencilBrush, Rect } from "fabric";
 import {
   doc,
   getDoc,
@@ -26,6 +26,16 @@ export default function CanvasPage() {
   const [status, setStatus] = useState("Loading...");
   const [copied, setCopied] = useState(false);
   const [selectedObjectColor, setSelectedObjectColor] = useState("#ff6b6b");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+
+  // Reset copied state on component mount to prevent reload issues
+  useEffect(() => {
+    setCopied(false);
+    // Add a small delay to ensure component is fully initialized
+    const timer = setTimeout(() => setIsInitialized(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Memoize the Firestore doc ref so effects don't resubscribe repeatedly
   const sceneRef = useMemo(() => doc(db, "scenes", id), [id]);
@@ -265,6 +275,16 @@ export default function CanvasPage() {
     };
   }, [fabricRef, currentColor]);
 
+  // Update brush color when currentColor changes
+  useEffect(() => {
+    const fc = fabricRef.current;
+    if (!fc) return;
+    
+    if (fc.isDrawingMode && fc.freeDrawingBrush) {
+      fc.freeDrawingBrush.color = currentColor;
+    }
+  }, [fabricRef, currentColor]);
+
   const addShape = (type) => {
     const fc = fabricRef.current;
     if (!fc || viewOnly) return;
@@ -321,7 +341,20 @@ export default function CanvasPage() {
   const togglePen = () => {
     const fc = fabricRef.current;
     if (!fc || viewOnly) return;
-    fc.isDrawingMode = !fc.isDrawingMode;
+    
+    const newDrawingMode = !fc.isDrawingMode;
+    fc.isDrawingMode = newDrawingMode;
+    setIsDrawingMode(newDrawingMode);
+    
+    // Configure drawing brush when entering drawing mode
+    if (newDrawingMode) {
+      // Initialize the brush if it doesn't exist
+      if (!fc.freeDrawingBrush) {
+        fc.freeDrawingBrush = new PencilBrush(fc);
+      }
+      fc.freeDrawingBrush.width = 5;
+      fc.freeDrawingBrush.color = currentColor;
+    }
   };
 
   useEffect(() => {
@@ -377,8 +410,8 @@ export default function CanvasPage() {
 
   return (
     <div className="canvas-page">
-      {/* Toast Notification */}
-      {copied && (
+      {/* Toast Notification - only show when initialized and copied */}
+      {copied && isInitialized && (
         <div className="toast-notification">
           <span className="toast-icon">✓</span>
           Link copied to clipboard!
@@ -387,7 +420,7 @@ export default function CanvasPage() {
       
       {/* Toolbar */}
       <div className="canvas-toolbar">
-        <div className="toolbar-section">
+        <div className="toolbar-section-left">
           <h2 className="canvas-title">
             Canvas <span className="canvas-id">{id.substring(0, 8)}...</span>
             {viewOnly && <span className="view-only-badge">View Only</span>}
@@ -398,7 +431,7 @@ export default function CanvasPage() {
           </div>
         </div>
 
-        <div className="toolbar-section">
+        <div className="toolbar-section-right">
           <div className="tool-group">
             <button 
               className="tool-btn btn-primary" 
@@ -428,13 +461,13 @@ export default function CanvasPage() {
               Text
             </button>
             <button 
-              className="tool-btn btn-secondary" 
+              className={`tool-btn ${isDrawingMode ? 'btn-primary' : 'btn-secondary'}`}
               onClick={togglePen}
               disabled={viewOnly}
               title="Toggle Drawing Mode"
             >
               <span className="tool-icon">✏️</span>
-              Draw
+              {isDrawingMode ? 'Drawing' : 'Draw'}
             </button>
           </div>
 
@@ -455,7 +488,7 @@ export default function CanvasPage() {
                 disabled={viewOnly}
                 title="Apply color to selected object"
               >
-                Apply to Selected
+                Apply
               </button>
               <input 
                 type="color" 
