@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { db } from "../firebase";
 import useFabric from "../hooks/useFabric";
+import "./CanvasPage.css";
 
 export default function CanvasPage() {
   const { id } = useParams();
@@ -324,33 +325,124 @@ export default function CanvasPage() {
   };
 
   return (
-    <div style={{ padding: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3>Canvas — id: {id} {viewOnly ? "(view-only)" : ""}</h3>
-        <div>
-          <button onClick={shareLink}>Share Canvas</button>
-          <button onClick={exportPNG} style={{ marginLeft: 8 }}>Export PNG</button>
+    <div className="canvas-page">
+      {/* Toolbar */}
+      <div className="canvas-toolbar">
+        <div className="toolbar-section">
+          <h2 className="canvas-title">
+            Canvas <span className="canvas-id">{id.substring(0, 8)}...</span>
+            {viewOnly && <span className="view-only-badge">View Only</span>}
+          </h2>
+          <div className="status-indicator">
+            <span className={`status-dot ${getStatusClass(status)}`}></span>
+            <span className="status-text">{status}</span>
+            {copied && <span className="copied-message">✓ Link copied!</span>}
+          </div>
+        </div>
+
+        <div className="toolbar-section">
+          <div className="tool-group">
+            <button 
+              className="tool-btn btn-primary" 
+              onClick={() => addShape("rect")}
+              disabled={viewOnly}
+              title="Add Rectangle"
+            >
+              <span className="tool-icon">⬜</span>
+              Rectangle
+            </button>
+            <button 
+              className="tool-btn btn-primary" 
+              onClick={() => addShape("circle")}
+              disabled={viewOnly}
+              title="Add Circle"
+            >
+              <span className="tool-icon">⭕</span>
+              Circle
+            </button>
+            <button 
+              className="tool-btn btn-primary" 
+              onClick={() => addShape("text")}
+              disabled={viewOnly}
+              title="Add Text"
+            >
+              <span className="tool-icon">📝</span>
+              Text
+            </button>
+            <button 
+              className="tool-btn btn-secondary" 
+              onClick={togglePen}
+              disabled={viewOnly}
+              title="Toggle Drawing Mode"
+            >
+              <span className="tool-icon">✏️</span>
+              Draw
+            </button>
+          </div>
+
+          <div className="action-group">
+            <button 
+              className="action-btn btn-success" 
+              onClick={shareLink}
+              title="Copy Share Link"
+            >
+              <span className="action-icon">🔗</span>
+              Share
+            </button>
+            <button 
+              className="action-btn btn-secondary" 
+              onClick={exportPNG}
+              title="Export as PNG"
+            >
+              <span className="action-icon">💾</span>
+              Export
+            </button>
+          </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 12, marginBottom: 12 }}>
-        <button onClick={() => addShape("rect")}>Rect</button>
-        <button onClick={() => addShape("circle")}>Circle</button>
-        <button onClick={() => addShape("text")}>Text</button>
-        <button onClick={togglePen} style={{ marginLeft: 8 }}>
-          Toggle Pen
-        </button>
-        <span style={{ marginLeft: 12 }}>{status}</span>
-        {copied && <span style={{ marginLeft: 12, color: "green" }}>Link copied!</span>}
+      {/* Canvas Container */}
+      <div className="canvas-container">
+        <div className="canvas-wrapper">
+          <canvas ref={htmlCanvasRef} width={1000} height={600}></canvas>
+        </div>
       </div>
 
-      <div style={{ border: "1px solid #ddd", width: 1000, height: 600 }}>
-        <canvas ref={htmlCanvasRef} width={1000} height={600}></canvas>
+      {/* Info Panel */}
+      <div className="info-panel">
+        <div className="info-section">
+          <h4>Share this canvas:</h4>
+          <div className="share-url">
+            <input 
+              type="text" 
+              value={window.location.href} 
+              readOnly 
+              className="share-input"
+              onClick={(e) => e.target.select()}
+            />
+            <button className="copy-btn btn-small btn-secondary" onClick={shareLink}>
+              Copy
+            </button>
+          </div>
+        </div>
+        
+        <div className="info-section">
+          <h4>Keyboard shortcuts:</h4>
+          <div className="shortcuts">
+            <span className="shortcut"><kbd>Delete</kbd> Remove selected</span>
+            <span className="shortcut"><kbd>Backspace</kbd> Remove selected</span>
+          </div>
+        </div>
       </div>
-
-      <p style={{ marginTop: 8 }}>
-        Share link: <code>{window.location.href}</code>
-      </p>
     </div>
   );
+}
+
+// Helper function for status styling
+function getStatusClass(status) {
+  if (status.includes('error') || status.includes('Error')) return 'error';
+  if (status.includes('Saving')) return 'saving';
+  if (status.includes('Saved') || status.includes('Ready')) return 'success';
+  if (status.includes('Loading')) return 'loading';
+  return 'default';
 }
