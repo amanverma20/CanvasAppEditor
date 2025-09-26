@@ -10,6 +10,8 @@ A collaborative real-time 2D drawing editor built with React, Fabric.js, and Fir
 
 A real-time collaborative 2D drawing editor built with React, Fabric.js, and Firebase Firestore. Multiple users can simultaneously create, edit, and share interactive canvases with instant synchronization across all connected clients.
 
+**Video Demonstration:** [https://drive.google.com/file/d/1dxxfFEYE1XQaHjfYh1lr-ZMjuJXXKYIq/view?usp=sharing](https://drive.google.com/file/d/1dxxfFEYE1XQaHjfYh1lr-ZMjuJXXKYIq/view?usp=sharing)
+
 ## How to Run Locally
 
 ### Prerequisites
