@@ -365,6 +365,23 @@ canvas {
   touch-action: none; /* Prevent touch gestures from interfering with canvas interaction */
   box-sizing: border-box;
   object-fit: contain; /* Maintain aspect ratio while fitting container */
+  cursor: default; /* Default cursor for selection mode */
+}
+
+/* Make canvas interactive for shape editing */
+canvas:hover {
+  cursor: crosshair;
+}
+
+/* When drawing mode is active */
+.drawing-mode canvas {
+  cursor: crosshair !important;
+}
+
+/* Ensure fabric.js controls are visible and interactive */
+.canvas-container .upper-canvas {
+  position: absolute !important;
+  pointer-events: auto !important;
 }
 
 /* Info Panel */

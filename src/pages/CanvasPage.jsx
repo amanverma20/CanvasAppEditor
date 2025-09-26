@@ -40,6 +40,41 @@ export default function CanvasPage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
 
+  // Ensure every object (rect, circle, i-text, paths) is fully resizable from all sides/corners
+  const prepareObjectForEditing = useCallback((obj) => {
+    if (!obj) return;
+    try {
+      obj.set({
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        hasRotatingPoint: true,
+        transparentCorners: false,
+        cornerColor: '#2563eb',
+        cornerStyle: 'rect',
+        cornerStrokeColor: '#1d4ed8',
+        cornerSize: 12,
+        borderColor: '#2563eb',
+        borderScaleFactor: 2,
+        lockUniScaling: false,
+        lockScalingX: false,
+        lockScalingY: false,
+        lockScalingFlip: false,
+        lockSkewingX: false,
+        lockSkewingY: false,
+        lockRotation: false,
+        lockMovementX: false,
+        lockMovementY: false,
+      });
+      if (typeof obj.setControlsVisibility === 'function') {
+        obj.setControlsVisibility({ tl: true, tr: true, bl: true, br: true, ml: true, mr: true, mt: true, mb: true, mtr: true });
+      }
+      if (obj.type === 'i-text') {
+        obj.editable = true;
+      }
+    } catch {}
+  }, []);
+
   // Reset copied state on component mount to prevent reload issues
   useEffect(() => {
     setCopied(false);
@@ -48,18 +83,50 @@ export default function CanvasPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle window resize for responsive canvas
+  // Handle responsive canvas sizing
   useEffect(() => {
     const handleResize = () => {
-      const newSize = getCanvasSize();
-      setCanvasSize(newSize);
+      setCanvasSize(getCanvasSize());
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Memoize the Firestore doc ref so effects don't resubscribe repeatedly
+  // Configure canvas for easy editing
+  useEffect(() => {
+    const fc = fabricRef.current;
+    if (!fc || viewOnly) return;
+
+    // Enable selection and interaction
+    fc.selection = true;
+    fc.interactive = true;
+    fc.allowTouchScrolling = false;
+    fc.preserveObjectStacking = true;
+    
+    // Configure selection appearance
+    fc.selectionColor = 'rgba(37, 99, 235, 0.1)';
+    fc.selectionBorderColor = '#2563eb';
+    fc.selectionLineWidth = 2;
+    
+    // Configure default object controls for ALL objects on canvas
+    fc.uniformScaling = false; // Allow non-uniform scaling
+    fc.uniScaleTransform = false;
+    fc.centeredScaling = false;
+    
+    // Make sure all existing objects have proper controls
+    fc.forEachObject((obj) => {
+      prepareObjectForEditing(obj);
+    });
+    
+    fc.renderAll();
+    
+    console.log('Canvas configured for editing:', {
+      selection: fc.selection,
+      interactive: fc.interactive,
+      uniformScaling: fc.uniformScaling
+    });
+  }, [fabricRef, viewOnly]);  // Memoize the Firestore doc ref so effects don't resubscribe repeatedly
   const sceneRef = useMemo(() => doc(db, "scenes", id), [id]);
 
   // to avoid applying our own snapshot after we write
@@ -96,6 +163,12 @@ export default function CanvasPage() {
             const fc = fabricRef.current;
             if (fc) {
               fc.loadFromJSON(data.data, () => {
+                // Configure all loaded objects for editing
+                if (!viewOnly) {
+                  fc.forEachObject((obj) => {
+                    prepareObjectForEditing(obj);
+                  });
+                }
                 forceRender(fc);
               });
             } else {
@@ -139,6 +212,12 @@ export default function CanvasPage() {
             if (cur !== remote.data) {
               isApplyingRemote.current = true;
               fc.loadFromJSON(remote.data, () => {
+                // Configure all loaded objects for editing
+                if (!viewOnly) {
+                  fc.forEachObject((obj) => {
+                    prepareObjectForEditing(obj);
+                  });
+                }
                 forceRender(fc);
                 setStatus("Updated from remote");
                 // small timeout to ensure events from load don't trigger saves
@@ -171,6 +250,12 @@ export default function CanvasPage() {
         pendingRemoteJson.current = null;
         fc.clear();
         fc.loadFromJSON(json, () => {
+          // Configure all loaded objects for editing
+          if (!viewOnly) {
+            fc.forEachObject((obj) => {
+              prepareObjectForEditing(obj);
+            });
+          }
           forceRender(fc);
           setStatus("Updated from remote");
           setTimeout(() => { isApplyingRemote.current = false; }, 0);
@@ -242,10 +327,20 @@ export default function CanvasPage() {
       }
     };
 
-    fc.on("object:added", onChange);
+    fc.on("object:added", (e) => {
+      if (!viewOnly && e?.target) {
+        prepareObjectForEditing(e.target);
+      }
+      onChange();
+    });
     fc.on("object:modified", onChange);
     fc.on("object:removed", onObjectRemoved);
-    fc.on("path:created", onChange);
+    fc.on("path:created", (e) => {
+      if (!viewOnly && e?.path) {
+        prepareObjectForEditing(e.path);
+      }
+      onChange();
+    });
 
     return () => {
       fc.off("object:added", onChange);
@@ -317,6 +412,28 @@ export default function CanvasPage() {
     isAddingObject.current = true;
     isApplyingRemote.current = false;
     
+    // Common properties for all shapes to enable full resize functionality
+    const commonProps = {
+      selectable: true,
+      hasControls: true,
+      hasBorders: true,
+      hasRotatingPoint: true,
+      transparentCorners: false,
+      cornerColor: '#2563eb',
+      cornerStyle: 'rect',
+      cornerStrokeColor: '#1d4ed8',
+      cornerSize: 12,           // Larger corners for easier interaction
+      borderColor: '#2563eb',
+      borderScaleFactor: 2,
+      // Enable all scaling options - using correct property names
+      lockUniScaling: false,     // Allow non-uniform scaling
+      lockScalingX: false,       // Allow horizontal scaling
+      lockScalingY: false,       // Allow vertical scaling
+      lockRotation: false,       // Allow rotation
+      lockMovementX: false,      // Allow horizontal movement
+      lockMovementY: false,      // Allow vertical movement
+    };
+    
     let obj;
     if (type === "rect") {
       obj = new Rect({
@@ -325,6 +442,7 @@ export default function CanvasPage() {
         left: 100,
         top: 100,
         fill: currentColor,
+        ...commonProps
       });
     } else if (type === "circle") {
       obj = new Circle({
@@ -332,6 +450,7 @@ export default function CanvasPage() {
         left: 150,
         top: 150,
         fill: currentColor,
+        ...commonProps
       });
     } else if (type === "text") {
       obj = new IText("Edit text", {
@@ -339,12 +458,17 @@ export default function CanvasPage() {
         top: 120,
         fontSize: 20,
         fill: currentColor,
+        // Text-specific properties
+        editable: true,
+        splitByGrapheme: false,
+        ...commonProps
       });
     }
     
     if (obj) {
       fc.add(obj);
       fc.setActiveObject(obj);
+      prepareObjectForEditing(obj);
       fc.requestRenderAll();
       console.log("Object added, count:", fc.getObjects().length);
       
@@ -556,7 +680,7 @@ export default function CanvasPage() {
       </div>
 
       {/* Canvas Container */}
-      <div className="canvas-container">
+      <div className={`canvas-container ${isDrawingMode ? 'drawing-mode' : ''}`}>
         <div className="canvas-wrapper">
           <canvas 
             ref={htmlCanvasRef} 
@@ -602,6 +726,16 @@ export default function CanvasPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+        
+        <div className="info-section">
+          <h4>How to edit shapes:</h4>
+          <div className="shortcuts">
+            <span className="shortcut">Click to select shapes</span>
+            <span className="shortcut">Drag corners to resize</span>
+            <span className="shortcut">Drag rotation handle to rotate</span>
+            <span className="shortcut">Double-click text to edit</span>
           </div>
         </div>
         
