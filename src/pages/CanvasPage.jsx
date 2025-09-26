@@ -1,5 +1,5 @@
 // src/pages/CanvasPage.jsx
-import { Circle, IText, PencilBrush, Rect } from "fabric";
+import { Ellipse, IText, PencilBrush, Rect } from "fabric";
 import {
   doc,
   getDoc,
@@ -51,9 +51,10 @@ export default function CanvasPage() {
         hasRotatingPoint: true,
         transparentCorners: false,
         cornerColor: '#2563eb',
-        cornerStyle: 'rect',
+        cornerStyle: 'circle',
         cornerStrokeColor: '#1d4ed8',
-        cornerSize: 12,
+        cornerSize: 18,
+        touchCornerSize: 28,
         borderColor: '#2563eb',
         borderScaleFactor: 2,
         lockUniScaling: false,
@@ -65,12 +66,20 @@ export default function CanvasPage() {
         lockRotation: false,
         lockMovementX: false,
         lockMovementY: false,
+        perPixelTargetFind: true,
+        padding: 4,
+        objectCaching: false,
       });
       if (typeof obj.setControlsVisibility === 'function') {
         obj.setControlsVisibility({ tl: true, tr: true, bl: true, br: true, ml: true, mr: true, mt: true, mb: true, mtr: true });
       }
       if (obj.type === 'i-text') {
         obj.editable = true;
+        // Allow non-uniform scaling for text so side handles resize independently
+        obj.lockUniScaling = false;
+      }
+      if (typeof obj.setCoords === 'function') {
+        obj.setCoords();
       }
     } catch {}
   }, []);
@@ -341,12 +350,24 @@ export default function CanvasPage() {
       }
       onChange();
     });
+    fc.on('selection:created', () => {
+      if (viewOnly) return;
+      const active = fc.getActiveObjects();
+      active.forEach((o) => prepareObjectForEditing(o));
+    });
+    fc.on('selection:updated', () => {
+      if (viewOnly) return;
+      const active = fc.getActiveObjects();
+      active.forEach((o) => prepareObjectForEditing(o));
+    });
 
     return () => {
       fc.off("object:added", onChange);
       fc.off("object:modified", onChange);
       fc.off("object:removed", onObjectRemoved);
       fc.off("path:created", onChange);
+      fc.off('selection:created');
+      fc.off('selection:updated');
     };
   }, [fabricRef, debouncedSave, viewOnly]);
 
@@ -445,8 +466,10 @@ export default function CanvasPage() {
         ...commonProps
       });
     } else if (type === "circle") {
-      obj = new Circle({
-        radius: 50,
+      // Use Ellipse so users can resize freely on X/Y (Circle enforces uniform scaling)
+      obj = new Ellipse({
+        rx: 50,
+        ry: 50,
         left: 150,
         top: 150,
         fill: currentColor,
