@@ -19,8 +19,19 @@ export default function CanvasPage() {
   const [searchParams] = useSearchParams();
   const viewOnly = searchParams.get("viewOnly") === "true";
 
+  // Responsive canvas dimensions
+  const getCanvasSize = () => {
+    const width = window.innerWidth;
+    if (width < 480) return { width: 320, height: 240 };
+    if (width < 768) return { width: 600, height: 450 };
+    if (width < 1024) return { width: 800, height: 500 };
+    return { width: 1000, height: 600 };
+  };
+
+  const [canvasSize, setCanvasSize] = useState(getCanvasSize());
+
   const htmlCanvasRef = useRef(null);
-  const fabricOptions = useMemo(() => ({ width: 1000, height: 600 }), []);
+  const fabricOptions = useMemo(() => canvasSize, [canvasSize]);
   const fabricRef = useFabric(htmlCanvasRef, fabricOptions);
 
   const [status, setStatus] = useState("Loading...");
@@ -35,6 +46,17 @@ export default function CanvasPage() {
     // Add a small delay to ensure component is fully initialized
     const timer = setTimeout(() => setIsInitialized(true), 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Handle window resize for responsive canvas
+  useEffect(() => {
+    const handleResize = () => {
+      const newSize = getCanvasSize();
+      setCanvasSize(newSize);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Memoize the Firestore doc ref so effects don't resubscribe repeatedly
@@ -536,7 +558,11 @@ export default function CanvasPage() {
       {/* Canvas Container */}
       <div className="canvas-container">
         <div className="canvas-wrapper">
-          <canvas ref={htmlCanvasRef} width={1000} height={600}></canvas>
+          <canvas 
+            ref={htmlCanvasRef} 
+            width={canvasSize.width} 
+            height={canvasSize.height}
+          ></canvas>
         </div>
       </div>
 
